@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Studio Store</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #000000;
+            --gray: #757575;
+            --light-gray: #f5f5f7;
+            --border: #e5e5e5;
+            --accent: #0071e3; /* ლურჯი აქცენტი Apple-ის სტილში */
+        }
+
+        * { box-sizing: border-box; transition: all 0.3s ease; }
+
+        body { 
+            font-family: -apple-system, system-ui, sans-serif; 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* --- ნავიგაცია --- */
+        nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo { font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; cursor: pointer; }
+
+        .nav-icons { display: flex; gap: 20px; align-items: center; }
+        .icon-btn { cursor: pointer; position: relative; font-size: 1.1rem; }
+
+        /* --- მთავარი კონტეინერი --- */
+        .container { max-width: 1200px; margin: auto; padding: 20px; }
+
+        /* --- ძებნა და ფილტრები --- */
+        .toolbar { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            margin-bottom: 40px; 
+            gap: 20px; 
+        }
+        
+        .search-input {
+            width: 100%;
+            max-width: 500px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 1px solid var(--border);
+            background: var(--light-gray);
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .category-tabs { display: flex; gap: 25px; }
+        .tab { 
+            background: none; border: none; color: var(--gray); 
+            cursor: pointer; font-size: 0.9rem; font-weight: 600;
+            padding-bottom: 5px;
+        }
+        .tab.active { color: var(--text); border-bottom: 2px solid var(--text); }
+
+        /* --- პროდუქტების ბადე (Responsive Grid) --- */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .product-card {
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .img-container {
+            background: var(--light-gray);
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 1 / 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .product-card img { width: 100%; height: 100%; object-fit: cover; }
+        .product-card:hover img { transform: scale(1.05); }
+
+        .product-info h3 { font-size: 1rem; margin: 5px 0; font-weight: 500; }
+        .product-info p { color: var(--gray); font-size: 0.9rem; }
+
+        /* --- გვერდითა პანელები (Cart & Admin) --- */
+        .side-panel {
+            position: fixed; top: 0; right: -100%; width: 350px; height: 100%;
+            background: white; z-index: 2000; padding: 30px;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column;
+        }
+        .side-panel.active { right: 0; }
+        .overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.2); z-index: 1500; display: none; 
+        }
+        .overlay.active { display: block; }
+
+        /* --- მობილური ვერსია --- */
+        @media (max-width: 600px) {
+            .side-panel { width: 100%; }
+            .product-grid { grid-template-columns: 1fr 1fr; gap: 15px; }
+            .img-container { aspect-ratio: 1/1; }
+            .product-info h3 { font-size: 0.9rem; }
+        }
+
+        /* ღილაკების სტილი */
+        .primary-btn {
+            background: var(--text); color: white; border: none;
+            padding: 15px; border-radius: 8px; cursor: pointer; font-weight: 600;
+        }
+        .primary-btn:hover { opacity: 0.8; }
+
+    </style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="closeAllPanels()"></div>
+
+<nav>
+    <div class="logo" onclick="location.reload()">STUDIO.</div>
+    <div class="nav-icons">
+        <span class="icon-btn" onclick="togglePanel('admin-panel')">⚙️</span>
+        <span class="icon-btn" onclick="togglePanel('cart-panel')">
+            🛒 <span id="cart-count" style="font-size:0.8rem; font-weight:bold;">0</span>
+        </span>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="toolbar">
+        <input type="text" class="search-input" id="search" placeholder="მოძებნეთ პროდუქტი..." oninput="searchItems()">
+        <div class="category-tabs">
+            <button class="tab active" onclick="filterCat('all', this)">ყველა</button>
+            <button class="tab" onclick="filterCat('tech', this)">ტექნიკა</button>
+            <button class="tab" onclick="filterCat('acc', this)">აქსესუარები</button>
+        </div>
+    </div>
+
+    <div class="product-grid" id="grid"></div>
+</div>
+
+<div class="side-panel" id="cart-panel">
+    <h2 style="display:flex; justify-content:space-between;">კალათა <span style="cursor:pointer" onclick="closeAllPanels()">×</span></h2>
+    <div id="cart-content" style="flex-grow:1; overflow-y:auto;"></div>
+    <div style="border-top:1px solid #eee; padding-top:20px;">
+        <h3 id="total-price">ჯამი: 0 ₾</h3>
+        <button class="primary-btn" style="width:100%">გადახდა</button>
+    </div>
+</div>
+
+<div class="side-panel" id="admin-panel">
+    <h2>მართვა <span style="cursor:pointer" onclick="closeAllPanels()">×</span></h2>
+    <div style="display:flex; flex-direction:column; gap:15px;">
+        <input type="text" id="p-name" placeholder="პროდუქტის სახელი" style="padding:10px;">
+        <input type="number" id="p-price" placeholder="ფასი" style="padding:10px;">
+        <select id="p-cat" style="padding:10px;">
+            <option value="tech">ტექნიკა</option>
+            <option value="acc">აქსესუარები</option>
+        </select>
+        <input type="text" id="p-img" placeholder="სურათის URL" style="padding:10px;">
+        <button class="primary-btn" onclick="addNewProduct()">პროდუქტის დამატება</button>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('studio_db')) || [
+        { id: 1, name: "iPhone 15 Pro", price: 3200, cat: "tech", img: "https://images.unsplash.com/photo-1696446701796-da61225697cc?w=600" },
+        { id: 2, name: "Studio Headphones", price: 850, cat: "acc", img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600" },
+        { id: 3, name: "Minimal Watch", price: 450, cat: "acc", img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600" }
+    ];
+    let cart = [];
+
+    function render(items = db) {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = items.map((p, idx) => `
+            <div class="product-card" onclick="addToCart(${p.id})">
+                <div class="img-container">
+                    <img src="${p.img}" alt="${p.name}">
+                </div>
+                <div class="product-info">
+                    <h3>${p.name}</h3>
+                    <p>${p.price} ₾</p>
+                </div>
+                <button onclick="event.stopPropagation(); deleteProduct(${idx})" style="border:none; background:none; color:red; font-size:0.7rem; cursor:pointer;">წაშლა</button>
+            </div>
+        `).join('');
+    }
+
+    function addToCart(id) {
+        const item = db.find(x => x.id === id);
+        cart.push(item);
+        updateCartUI();
+        togglePanel('cart-panel');
+    }
+
+    function updateCartUI() {
+        document.getElementById('cart-count').innerText = cart.length;
+        const content = document.getElementById('cart-content');
+        content.innerHTML = cart.map((item, i) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #f9f9f9; padding-bottom:10px;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <img src="${item.img}" style="width:50px; height:50px; object-fit:cover; border-radius:5px;">
+                    <div>
+                        <div style="font-size:0.9rem; font-weight:bold;">${item.name}</div>
+                        <div style="font-size:0.8rem; color:var(--gray);">${item.price} ₾</div>
+                    </div>
+                </div>
+                <span style="cursor:pointer; color:red;" onclick="removeFromCart(${i})">×</span>
+            </div>
+        `).join('');
+        document.getElementById('total-price').innerText = `ჯამი: ${cart.reduce((s, x) => s + x.price, 0)} ₾`;
+    }
+
+    function removeFromCart(i) {
+        cart.splice(i, 1);
+        updateCartUI();
+    }
+
+    function addNewProduct() {
+        const name = document.getElementById('p-name').value;
+        const price = document.getElementById('p-price').value;
+        const cat = document.getElementById('p-cat').value;
+        const img = document.getElementById('p-img').value || 'https://via.placeholder.com/600';
+
+        if(name && price) {
+            db.push({ id: Date.now(), name, price: Number(price), cat, img });
+            localStorage.setItem('studio_db', JSON.stringify(db));
+            render();
+            closeAllPanels();
+        }
+    }
+
+    function deleteProduct(idx) {
+        if(confirm('წავშალოთ?')) {
+            db.splice(idx, 1);
+            localStorage.setItem('studio_db', JSON.stringify(db));
+            render();
+        }
+    }
+
+    function searchItems() {
+        const t = document.getElementById('search').value.toLowerCase();
+        render(db.filter(x => x.name.toLowerCase().includes(t)));
+    }
+
+    function filterCat(cat, btn) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        render(cat === 'all' ? db : db.filter(x => x.cat === cat));
+    }
+
+    function togglePanel(id) {
+        document.getElementById('overlay').classList.add('active');
+        document.getElementById(id).classList.add('active');
+    }
+
+    function closeAllPanels() {
+        document.getElementById('overlay').classList.remove('active');
+        document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('active'));
+    }
+
+    render();
+</script>
+
+</body>
+</html>
